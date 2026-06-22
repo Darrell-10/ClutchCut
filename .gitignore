@@ -1,0 +1,12 @@
+backend/.venv/
+backend/uploads/
+backend/clips/
+backend/frames/
+backend/thumbnails/
+backend/clutch_cut.db
+backend/.env
+frontend/dist/
+frontend/node_modules/
+__pycache__/
+*.pyc
+.DS_Store
