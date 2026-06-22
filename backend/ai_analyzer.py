@@ -1,11 +1,10 @@
 import os
 import json
 import re
-import base64
 from pathlib import Path
 from PIL import Image
-import io
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
 PLAY_CATEGORIES = [
     "offense", "defense", "pick_and_roll", "fast_break", "three_pointer",
@@ -47,21 +46,18 @@ Respond with a JSON array ONLY (no markdown):
 Only include clips with relevance > 0.3. Sort by relevance descending."""
 
 
-def _encode_image_b64(image_path: str, max_size: tuple = (640, 480)) -> str:
-    """Resize and base64-encode an image for the OpenAI API."""
+def _load_pil(image_path: str) -> Image.Image:
     img = Image.open(image_path)
-    img.thumbnail(max_size)
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=85)
-    return base64.b64encode(buf.getvalue()).decode("utf-8")
+    img.thumbnail((640, 480))
+    return img
 
 
-class OpenAIAnalyzer:
+class GeminiAnalyzer:
     def __init__(self):
-        api_key = os.environ.get("OPENAI_API_KEY")
+        api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
-        self.client = OpenAI(api_key=api_key)
+            raise ValueError("GEMINI_API_KEY environment variable not set")
+        self.client = genai.Client(api_key=api_key)
 
     def classify_clip(self, frame_paths: list[str]) -> dict:
         """Classify a basketball clip given a list of extracted frame image paths."""
@@ -73,22 +69,15 @@ class OpenAIAnalyzer:
                 "keywords": []
             }
 
-        # Build content: text prompt + up to 5 frames as base64 images
-        content = [{"type": "text", "text": CLASSIFY_PROMPT}]
+        parts: list = [CLASSIFY_PROMPT]
         for path in frame_paths[:5]:
             try:
-                b64 = _encode_image_b64(path)
-                content.append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{b64}",
-                        "detail": "low"
-                    }
-                })
+                img = _load_pil(path)
+                parts.append(img)
             except Exception:
                 continue
 
-        if len(content) < 2:
+        if len(parts) < 2:
             return {
                 "category": "unknown",
                 "description": "Could not load frames for analysis.",
@@ -97,13 +86,15 @@ class OpenAIAnalyzer:
             }
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": content}],
-                max_tokens=512,
-                temperature=0.1,
+            response = self.client.models.generate_content(
+                model="gemini-1.5-flash",
+                contents=parts,
+                config=types.GenerateContentConfig(
+                    temperature=0.1,
+                    max_output_tokens=512,
+                )
             )
-            text = response.choices[0].message.content.strip()
+            text = response.text.strip()
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)
             result = json.loads(text)
@@ -123,7 +114,7 @@ class OpenAIAnalyzer:
             }
 
     def semantic_search(self, query: str, clips: list[dict]) -> list[dict]:
-        """Use GPT-4o to rank clips by relevance to a natural language query."""
+        """Use Gemini to rank clips by relevance to a natural language query."""
         if not clips:
             return []
 
@@ -138,13 +129,15 @@ class OpenAIAnalyzer:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=1024,
-                temperature=0.1,
+            response = self.client.models.generate_content(
+                model="gemini-1.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.1,
+                    max_output_tokens=1024,
+                )
             )
-            text = response.choices[0].message.content.strip()
+            text = response.text.strip()
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)
             rankings = json.loads(text)
@@ -164,7 +157,3 @@ class OpenAIAnalyzer:
             q_lower = query.lower()
             return [c for c in clips
                     if q_lower in c["description"].lower() or q_lower in c["category"].lower()]
-
-
-# Alias so main.py import stays the same
-GeminiAnalyzer = OpenAIAnalyzer
