@@ -77,5 +77,8 @@ FRONTEND_PID=$!
 # Cleanup on exit
 trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; echo 'Stopped.'" EXIT INT TERM
 
+# Wait a moment for the frontend dev server to start, then open Chrome
+sleep 3 && open -a "Google Chrome" "http://localhost:5173" &
+
 # Wait for both
 wait $BACKEND_PID $FRONTEND_PID
