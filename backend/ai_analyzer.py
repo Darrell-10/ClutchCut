@@ -87,7 +87,7 @@ class GeminiAnalyzer:
 
         try:
             response = self.client.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-2.5-flash",
                 contents=parts,
                 config=types.GenerateContentConfig(
                     temperature=0.1,
@@ -130,7 +130,7 @@ class GeminiAnalyzer:
 
         try:
             response = self.client.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.1,
