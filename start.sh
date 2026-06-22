@@ -19,21 +19,21 @@ command -v python3 >/dev/null 2>&1 || { err "python3 not found"; exit 1; }
 command -v node    >/dev/null 2>&1 || { err "node not found"; exit 1; }
 command -v ffmpeg  >/dev/null 2>&1 || { warn "ffmpeg not found — install with: brew install ffmpeg"; exit 1; }
 
-# ── Gemini API Key ───────────────────────────────────────────────────────────
+# ── OpenAI API Key ───────────────────────────────────────────────────────────
 if [ -f "$BACKEND/.env" ]; then
   source "$BACKEND/.env"
 fi
 
-if [ -z "$GEMINI_API_KEY" ]; then
+if [ -z "$OPENAI_API_KEY" ]; then
   echo ""
-  err "GEMINI_API_KEY is not set."
-  echo -e "  1. Get your key at ${CYAN}https://aistudio.google.com/app/apikey${RESET}"
+  err "OPENAI_API_KEY is not set."
+  echo -e "  1. Get your key at ${CYAN}https://platform.openai.com/api-keys${RESET}"
   echo -e "  2. Create ${BOLD}backend/.env${RESET} with:"
-  echo -e "     ${YELLOW}GEMINI_API_KEY=your_key_here${RESET}"
+  echo -e "     ${YELLOW}OPENAI_API_KEY=your_key_here${RESET}"
   echo ""
   exit 1
 fi
-ok "Gemini API key found"
+ok "OpenAI API key found"
 
 # ── Backend setup ────────────────────────────────────────────────────────────
 log "Setting up Python backend..."

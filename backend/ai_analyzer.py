@@ -1,11 +1,11 @@
 import os
 import json
 import re
+import base64
 from pathlib import Path
-from typing import Optional
-from google import genai
-from google.genai import types
 from PIL import Image
+import io
+from openai import OpenAI
 
 PLAY_CATEGORIES = [
     "offense", "defense", "pick_and_roll", "fast_break", "three_pointer",
@@ -21,7 +21,7 @@ Respond with a JSON object ONLY (no markdown, no extra text):
 {
   "category": "<one of: offense, defense, pick_and_roll, fast_break, three_pointer, dunk, half_court_shot, layup, steal, block, rebound, turnover, free_throw, alley_oop, crossover, transition, unknown>",
   "description": "<2-3 sentence detailed description of exactly what is happening in this clip, including player actions, shot type, defensive play, or other relevant details>",
-  "confidence": <0.0-1.0 float representing how confident you are>,
+  "confidence": <0.0-1.0 float>,
   "keywords": ["keyword1", "keyword2", ...]
 }
 
@@ -47,18 +47,21 @@ Respond with a JSON array ONLY (no markdown):
 Only include clips with relevance > 0.3. Sort by relevance descending."""
 
 
-def _load_pil(image_path: str) -> Image.Image:
+def _encode_image_b64(image_path: str, max_size: tuple = (640, 480)) -> str:
+    """Resize and base64-encode an image for the OpenAI API."""
     img = Image.open(image_path)
-    img.thumbnail((640, 480))
-    return img
+    img.thumbnail(max_size)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 
-class GeminiAnalyzer:
+class OpenAIAnalyzer:
     def __init__(self):
-        api_key = os.environ.get("GEMINI_API_KEY")
+        api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable not set")
-        self.client = genai.Client(api_key=api_key)
+            raise ValueError("OPENAI_API_KEY environment variable not set")
+        self.client = OpenAI(api_key=api_key)
 
     def classify_clip(self, frame_paths: list[str]) -> dict:
         """Classify a basketball clip given a list of extracted frame image paths."""
@@ -70,15 +73,22 @@ class GeminiAnalyzer:
                 "keywords": []
             }
 
-        parts: list = [CLASSIFY_PROMPT]
+        # Build content: text prompt + up to 5 frames as base64 images
+        content = [{"type": "text", "text": CLASSIFY_PROMPT}]
         for path in frame_paths[:5]:
             try:
-                img = _load_pil(path)
-                parts.append(img)
+                b64 = _encode_image_b64(path)
+                content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{b64}",
+                        "detail": "low"
+                    }
+                })
             except Exception:
                 continue
 
-        if len(parts) < 2:
+        if len(content) < 2:
             return {
                 "category": "unknown",
                 "description": "Could not load frames for analysis.",
@@ -87,15 +97,13 @@ class GeminiAnalyzer:
             }
 
         try:
-            response = self.client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=parts,
-                config=types.GenerateContentConfig(
-                    temperature=0.1,
-                    max_output_tokens=512,
-                )
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": content}],
+                max_tokens=512,
+                temperature=0.1,
             )
-            text = response.text.strip()
+            text = response.choices[0].message.content.strip()
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)
             result = json.loads(text)
@@ -115,7 +123,7 @@ class GeminiAnalyzer:
             }
 
     def semantic_search(self, query: str, clips: list[dict]) -> list[dict]:
-        """Use Gemini to rank clips by relevance to a natural language query."""
+        """Use GPT-4o to rank clips by relevance to a natural language query."""
         if not clips:
             return []
 
@@ -130,15 +138,13 @@ class GeminiAnalyzer:
         )
 
         try:
-            response = self.client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.1,
-                    max_output_tokens=1024,
-                )
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=1024,
+                temperature=0.1,
             )
-            text = response.text.strip()
+            text = response.choices[0].message.content.strip()
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)
             rankings = json.loads(text)
@@ -158,3 +164,7 @@ class GeminiAnalyzer:
             q_lower = query.lower()
             return [c for c in clips
                     if q_lower in c["description"].lower() or q_lower in c["category"].lower()]
+
+
+# Alias so main.py import stays the same
+GeminiAnalyzer = OpenAIAnalyzer
