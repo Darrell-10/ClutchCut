@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "react";
 import { X, Download, ChevronLeft, ChevronRight } from "lucide-react";
-import clsx from "clsx";
 import type { Clip } from "../types";
-import { CATEGORY_LABELS, CATEGORY_COLORS, CATEGORY_EMOJIS } from "../types";
+import { CATEGORY_LABELS, CATEGORY_EMOJIS } from "../types";
 import { getClipUrl, getDownloadUrl } from "../api";
 
 interface Props {
@@ -39,63 +38,69 @@ export default function VideoPlayer({ clip, clips, onClose, onNavigate }: Props)
   }, [clip.id]);
 
   const label = CATEGORY_LABELS[clip.category] ?? clip.category;
-  const color = CATEGORY_COLORS[clip.category] ?? CATEGORY_COLORS.unknown;
   const emoji = CATEGORY_EMOJIS[clip.category] ?? "❓";
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-navy-dark/95 backdrop-blur-md"
+      style={{
+        background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px), rgba(8,15,30,0.97)'
+      }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="relative w-full max-w-4xl mx-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className={clsx(
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold border",
-              color
-            )}>
-              <span>{emoji}</span>
-              {label}
-            </div>
-            <span className="text-white/40 text-sm">
+            <span className="font-mono text-[10px] text-sky-film border border-sky-film/30 px-2 py-1 rounded tracking-widest uppercase bg-sky-film/10">
+              {emoji} {label}
+            </span>
+            <span className="font-mono text-xs text-cream-muted/40 tracking-wider">
               {formatTime(clip.start_time)} – {formatTime(clip.end_time)}
             </span>
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-[recBlink_1.2s_ease-in-out_infinite]" />
           </div>
           <div className="flex items-center gap-2">
             <a
               href={getDownloadUrl(clip.clip_filename)}
               download
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 text-sm transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg tape-border bg-navy/60 hover:bg-navy text-cream-muted/60 text-xs font-mono tracking-wider uppercase transition-all"
             >
-              <Download className="w-4 h-4" />
-              Download
+              <Download className="w-3 h-3" />
+              SAVE CLIP
             </a>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 transition-colors"
+              className="p-2 rounded-lg tape-border bg-navy/60 hover:bg-navy text-cream-muted/60 transition-all"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Video */}
-        <div className="relative bg-black rounded-2xl overflow-hidden">
+        <div className="relative bg-black rounded-xl overflow-hidden tape-border shadow-[0_0_60px_rgba(91,188,214,0.1)]">
           <video
             ref={videoRef}
             key={clip.id}
             src={getClipUrl(clip.clip_filename)}
             controls
             autoPlay
-            className="w-full max-h-[70vh] object-contain"
+            className="w-full max-h-[68vh] object-contain"
           />
 
-          {/* Navigation overlays */}
+          {/* Scanline on video */}
+          <div className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 3px)'
+            }}
+          />
+
+          {/* Nav buttons */}
           {hasPrev && (
             <button
               onClick={() => onNavigate(clips[currentIdx - 1])}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition-colors backdrop-blur-sm"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full border border-sky-film/30 bg-navy-dark/80 hover:bg-navy-dark hover:border-sky-film/60 flex items-center justify-center text-sky-film transition-all backdrop-blur-sm"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -103,7 +108,7 @@ export default function VideoPlayer({ clip, clips, onClose, onNavigate }: Props)
           {hasNext && (
             <button
               onClick={() => onNavigate(clips[currentIdx + 1])}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition-colors backdrop-blur-sm"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full border border-sky-film/30 bg-navy-dark/80 hover:bg-navy-dark hover:border-sky-film/60 flex items-center justify-center text-sky-film transition-all backdrop-blur-sm"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -111,17 +116,17 @@ export default function VideoPlayer({ clip, clips, onClose, onNavigate }: Props)
         </div>
 
         {/* Description */}
-        <div className="mt-3 p-4 bg-white/5 border border-white/10 rounded-xl">
-          <p className="text-white/70 text-sm leading-relaxed">{clip.description}</p>
-          <div className="mt-2 flex items-center gap-4 text-xs text-white/30">
-            <span>Clip {currentIdx + 1} of {clips.length}</span>
-            <span>Confidence: {Math.round(clip.confidence * 100)}%</span>
-            <span>Duration: {formatTime(clip.duration)}</span>
+        <div className="mt-3 p-4 tape-border rounded-xl bg-navy-dark/70">
+          <p className="text-cream-muted/60 text-xs font-mono leading-relaxed">{clip.description}</p>
+          <div className="mt-2 flex items-center gap-5 text-[10px] text-cream-muted/25 font-mono tracking-widest">
+            <span>CLIP {currentIdx + 1}/{clips.length}</span>
+            <span>CONF: {Math.round(clip.confidence * 100)}%</span>
+            <span>DUR: {formatTime(clip.duration)}</span>
           </div>
         </div>
 
-        <p className="text-center text-xs text-white/20 mt-2">
-          ← → arrow keys to navigate · Esc to close
+        <p className="text-center text-[10px] text-cream-muted/20 mt-2 font-mono tracking-widest">
+          ◀ ▶  ARROW KEYS TO NAVIGATE  ·  ESC TO CLOSE
         </p>
       </div>
     </div>

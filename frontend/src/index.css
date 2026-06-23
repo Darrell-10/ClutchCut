@@ -3,32 +3,157 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
   body {
+    background-color: #080F1E;
+    color: #F0E6D3;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
   }
 }
 
-@layer utilities {
-  .bg-white\/8 {
-    background-color: rgba(255, 255, 255, 0.08);
-  }
+/* ── VHS Scanlines overlay ── */
+.vhs-scanlines::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.08) 3px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9997;
+  animation: scanlineMove 10s linear infinite;
 }
 
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+/* ── VHS noise / grain ── */
+.vhs-noise::after {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: 0.035;
+  pointer-events: none;
+  z-index: 9996;
+  animation: noise 0.4s steps(1) infinite;
 }
 
-.animate-shimmer {
+/* ── VHS tracking glitch ── */
+.vhs-tracking {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background: linear-gradient(
+    transparent 30%,
+    rgba(91, 188, 214, 0.03) 50%,
+    transparent 70%
+  );
+  animation: tracking 8s ease-in-out infinite;
+}
+
+/* ── Chromatic aberration on headings ── */
+.glitch-text {
+  position: relative;
+}
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0; left: 0;
+  opacity: 0.06;
+}
+.glitch-text::before {
+  color: #ff3366;
+  transform: translateX(-2px);
+}
+.glitch-text::after {
+  color: #33ccff;
+  transform: translateX(2px);
+}
+
+/* ── CRT vignette ── */
+.crt-vignette {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(4, 8, 20, 0.7) 100%
+  );
+  pointer-events: none;
+  z-index: 9995;
+}
+
+/* ── Film strip decoration ── */
+.film-strip {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 18px,
+    rgba(240, 230, 211, 0.06) 18px,
+    rgba(240, 230, 211, 0.06) 22px
+  );
+}
+
+/* ── Tape texture border ── */
+.tape-border {
+  border: 1px solid rgba(91, 188, 214, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(91, 188, 214, 0.05),
+    inset 0 1px 0 rgba(240, 230, 211, 0.05);
+}
+
+/* ── Progress bar shimmer ── */
+.shimmer-bar {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
   animation: shimmer 2s infinite;
 }
 
-video:focus {
-  outline: none;
+@keyframes scanlineMove {
+  from { background-position: 0 0; }
+  to { background-position: 0 100px; }
 }
+@keyframes noise {
+  0%   { transform: translate(0,0) }
+  10%  { transform: translate(-2px,1px) }
+  20%  { transform: translate(2px,-1px) }
+  30%  { transform: translate(-1px,2px) }
+  40%  { transform: translate(1px,-2px) }
+  50%  { transform: translate(-2px,-1px) }
+  60%  { transform: translate(2px,1px) }
+  70%  { transform: translate(-1px,-2px) }
+  80%  { transform: translate(1px,2px) }
+  90%  { transform: translate(0,1px) }
+  100% { transform: translate(0,0) }
+}
+@keyframes tracking {
+  0%, 85%, 100% { opacity: 0; transform: translateY(0); }
+  87% { opacity: 1; transform: translateY(-2px); clip-path: inset(35% 0 62% 0); }
+  89% { opacity: 0.5; transform: translateY(1px); clip-path: inset(55% 0 42% 0); }
+  91% { opacity: 0; }
+}
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes recBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+video:focus { outline: none; }

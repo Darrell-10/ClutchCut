@@ -1,18 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Film, Zap, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import logo from "./assets/logo.png";
 import VideoUpload from "./components/VideoUpload";
 import ProcessingStatusComp from "./components/ProcessingStatus";
 import SearchBar from "./components/SearchBar";
 import ClipCard from "./components/ClipCard";
 import VideoPlayer from "./components/VideoPlayer";
 import CategoryFilter from "./components/CategoryFilter";
+import CamcorderHUD from "./components/CamcorderHUD";
 import type { Clip, PlayCategory, ProcessingStatus } from "./types";
-import {
-  uploadVideo,
-  getStatus,
-  getClips,
-  searchClips,
-} from "./api";
+import { uploadVideo, getStatus, getClips, searchClips } from "./api";
 
 type Stage = "upload" | "processing" | "ready";
 
@@ -31,10 +28,7 @@ export default function App() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = () => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
   };
 
   const loadAllClips = useCallback(async (jId: string) => {
@@ -51,13 +45,8 @@ export default function App() {
       try {
         const s = await getStatus(jId);
         setProcessingStatus(s);
-        if (s.status === "done") {
-          stopPolling();
-          setStage("ready");
-          await loadAllClips(jId);
-        } else if (s.status === "failed") {
-          stopPolling();
-        }
+        if (s.status === "done") { stopPolling(); setStage("ready"); await loadAllClips(jId); }
+        else if (s.status === "failed") { stopPolling(); }
       } catch {}
     }, 2500);
   }, [loadAllClips]);
@@ -71,15 +60,7 @@ export default function App() {
       setJobId(res.job_id);
       setJobFilename(res.filename);
       setStage("processing");
-      const initialStatus: ProcessingStatus = {
-        job_id: res.job_id,
-        status: "pending",
-        progress: 0,
-        total_clips: 0,
-        processed_clips: 0,
-        message: "Starting...",
-      };
-      setProcessingStatus(initialStatus);
+      setProcessingStatus({ job_id: res.job_id, status: "pending", progress: 0, total_clips: 0, processed_clips: 0, message: "Starting..." });
       startPolling(res.job_id);
     } catch (err: any) {
       alert(err?.response?.data?.detail ?? "Upload failed. Is the backend running?");
@@ -97,15 +78,8 @@ export default function App() {
       const res = await searchClips({ job_id: jobId, query });
       setDisplayedClips(res.clips);
     } catch {
-      // Fallback: local keyword filter
       const q = query.toLowerCase();
-      setDisplayedClips(
-        allClips.filter(
-          (c) =>
-            c.description.toLowerCase().includes(q) ||
-            c.category.toLowerCase().includes(q)
-        )
-      );
+      setDisplayedClips(allClips.filter(c => c.description.toLowerCase().includes(q) || c.category.toLowerCase().includes(q)));
     } finally {
       setIsSearching(false);
     }
@@ -114,175 +88,190 @@ export default function App() {
   const handleCategoryFilter = (cat: PlayCategory | null) => {
     setSelectedCategory(cat);
     setSearchQuery(null);
-    if (cat === null) {
-      setDisplayedClips(allClips);
-    } else {
-      setDisplayedClips(allClips.filter((c) => c.category === cat));
-    }
+    setDisplayedClips(cat === null ? allClips : allClips.filter(c => c.category === cat));
   };
 
   const handleReset = () => {
     stopPolling();
-    setStage("upload");
-    setJobId(null);
-    setProcessingStatus(null);
-    setAllClips([]);
-    setDisplayedClips([]);
-    setSelectedCategory(null);
-    setSearchQuery(null);
-    setActiveClip(null);
+    setStage("upload"); setJobId(null); setProcessingStatus(null);
+    setAllClips([]); setDisplayedClips([]); setSelectedCategory(null);
+    setSearchQuery(null); setActiveClip(null);
   };
 
-  // Category counts for filter tabs
   const categoryCounts: Record<string, number> = {};
-  for (const c of allClips) {
-    categoryCounts[c.category] = (categoryCounts[c.category] ?? 0) + 1;
-  }
+  for (const c of allClips) { categoryCounts[c.category] = (categoryCounts[c.category] ?? 0) + 1; }
+
+  const isRecording = stage === "processing";
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      {/* Background gradient */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-600/8 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-amber-600/6 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-navy-dark relative" style={{ animation: 'flicker 6s ease-in-out infinite' }}>
+
+      {/* VHS overlay layers */}
+      <div className="vhs-scanlines vhs-noise pointer-events-none" />
+      <div className="vhs-tracking pointer-events-none" />
+      <div className="crt-vignette pointer-events-none" />
+
+      {/* Camcorder HUD */}
+      <CamcorderHUD isRecording={isRecording} />
+
+      {/* Background texture */}
+      <div className="fixed inset-0 pointer-events-none opacity-30"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 60% at 20% 10%, rgba(44,24,16,0.5) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 80% at 80% 90%, rgba(15,30,58,0.8) 0%, transparent 60%),
+            radial-gradient(ellipse 40% 40% at 50% 50%, rgba(91,188,214,0.03) 0%, transparent 70%)
+          `
+        }}
+      />
+
+      {/* Film sprocket holes - left edge */}
+      <div className="fixed left-0 top-0 bottom-0 w-6 flex flex-col justify-around items-center py-4 pointer-events-none opacity-10 z-10">
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="w-3 h-4 border border-cream-muted/60 rounded-sm bg-navy-dark" />
+        ))}
+      </div>
+      {/* Right edge */}
+      <div className="fixed right-0 top-0 bottom-0 w-6 flex flex-col justify-around items-center py-4 pointer-events-none opacity-10 z-10">
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="w-3 h-4 border border-cream-muted/60 rounded-sm bg-navy-dark" />
+        ))}
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 py-10">
-        {/* Header */}
-        <header className="text-center mb-12">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-              <Film className="w-6 h-6 text-white" />
+      <div className="relative z-10 max-w-6xl mx-auto px-8 py-10">
+
+        {/* ── HEADER ── */}
+        <header className="text-center mb-14">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <img
+                src={logo}
+                alt="ClutchCut"
+                className="h-28 w-auto drop-shadow-[0_0_30px_rgba(91,188,214,0.3)] select-none"
+              />
+              {/* Glow behind logo */}
+              <div className="absolute inset-0 blur-2xl bg-sky-film/10 -z-10 scale-150" />
             </div>
-            <h1 className="text-4xl font-black tracking-tight">
-              Clutch<span className="text-orange-400">Cut</span>
-            </h1>
           </div>
-          <p className="text-white/50 text-lg max-w-xl mx-auto">
-            Upload your game footage. Search any play. Get the clip instantly.
+
+          <p className="text-cream-muted/40 text-sm font-mono tracking-[0.4em] uppercase mb-2">
+            Basketball Intelligence System
           </p>
+          <div className="flex items-center justify-center gap-4 text-[10px] font-mono tracking-widest text-cream-muted/25">
+            <span>◉ AI SCENE DETECT</span>
+            <span className="text-sky-film/30">▮</span>
+            <span>◉ GEMINI VISION</span>
+            <span className="text-sky-film/30">▮</span>
+            <span>◉ INSTANT SEARCH</span>
+          </div>
+
           {jobId && stage !== "upload" && (
             <button
               onClick={handleReset}
-              className="mt-4 inline-flex items-center gap-1.5 text-sm text-white/30 hover:text-white/60 transition-colors"
+              className="mt-5 inline-flex items-center gap-1.5 text-[10px] text-cream-muted/25 hover:text-cream-muted/50 transition-colors font-mono tracking-widest uppercase"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Upload new video
+              <RefreshCw className="w-3 h-3" />
+              NEW FOOTAGE
             </button>
           )}
         </header>
 
-        {/* UPLOAD STAGE */}
+        {/* ── UPLOAD STAGE ── */}
         {stage === "upload" && (
-          <div className="flex flex-col items-center gap-8">
+          <div className="flex flex-col items-center gap-10">
             <VideoUpload onUpload={handleUpload} isUploading={isUploading} />
 
-            {/* Feature pills */}
-            <div className="flex flex-wrap justify-center gap-3">
-              {[
-                { icon: "🎯", label: "Scene Detection" },
-                { icon: "🤖", label: "Gemini Vision AI" },
-                { icon: "⚡", label: "Instant Search" },
-                { icon: "✂️", label: "Auto Clip Trimming" },
-              ].map(({ icon, label }) => (
-                <div
-                  key={label}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-white/50"
-                >
-                  <span>{icon}</span>
-                  {label}
-                </div>
-              ))}
+            {/* Feature strip */}
+            <div className="w-full max-w-2xl">
+              <div className="h-px bg-gradient-to-r from-transparent via-sky-film/20 to-transparent mb-6" />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { icon: "🎬", label: "SCENE DETECT", sub: "Auto-split footage" },
+                  { icon: "🤖", label: "GEMINI AI", sub: "Vision analysis" },
+                  { icon: "⚡", label: "FAST SEARCH", sub: "Natural language" },
+                  { icon: "✂️", label: "CLIP EXPORT", sub: "Download any play" },
+                ].map(({ icon, label, sub }) => (
+                  <div key={label} className="flex flex-col items-center gap-2 p-4 tape-border rounded-xl bg-navy/40 text-center">
+                    <span className="text-2xl">{icon}</span>
+                    <div>
+                      <p className="text-[10px] font-mono font-bold tracking-widest text-sky-film/70 uppercase">{label}</p>
+                      <p className="text-[9px] font-mono text-cream-muted/30 mt-0.5">{sub}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* PROCESSING STAGE */}
+        {/* ── PROCESSING STAGE ── */}
         {stage === "processing" && processingStatus && (
           <div className="flex flex-col items-center gap-6">
             <div className="text-center">
-              <p className="text-white/50 text-sm mb-1">Processing</p>
-              <p className="text-white font-semibold">{jobFilename}</p>
+              <p className="text-[10px] font-mono text-cream-muted/30 tracking-widest uppercase mb-1">Loading Tape</p>
+              <p className="text-cream-dark font-mono tracking-wide">{jobFilename}</p>
             </div>
             <ProcessingStatusComp status={processingStatus} />
           </div>
         )}
 
-        {/* READY STAGE */}
+        {/* ── READY STAGE ── */}
         {stage === "ready" && (
           <div className="flex flex-col gap-8">
             {/* Stats bar */}
-            <div className="flex items-center justify-between p-4 bg-green-500/8 border border-green-500/20 rounded-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-green-400" />
-                </div>
+            <div className="flex items-center justify-between p-5 tape-border rounded-xl bg-navy/50">
+              <div className="flex items-center gap-4">
+                <div className="w-2 h-2 rounded-full bg-sky-film shadow-[0_0_8px_rgba(91,188,214,0.8)]" />
                 <div>
-                  <p className="text-sm font-semibold text-green-400">Ready to Search</p>
-                  <p className="text-xs text-white/40">{jobFilename}</p>
+                  <p className="text-[10px] font-mono font-bold text-sky-film tracking-widest uppercase">Tape Ready</p>
+                  <p className="text-[10px] text-cream-muted/30 font-mono mt-0.5 tracking-wider">{jobFilename}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-black text-white">{allClips.length}</p>
-                <p className="text-xs text-white/40">clips analyzed</p>
+                <p className="text-3xl font-black text-cream font-mono">{allClips.length}</p>
+                <p className="text-[10px] text-cream-muted/30 font-mono tracking-widest uppercase">CLIPS INDEXED</p>
               </div>
             </div>
 
             {/* Search */}
-            <SearchBar
-              onSearch={handleSearch}
-              isSearching={isSearching}
-              disabled={false}
-            />
+            <SearchBar onSearch={handleSearch} isSearching={isSearching} />
 
             {/* Category filters */}
-            <CategoryFilter
-              selected={selectedCategory}
-              counts={categoryCounts}
-              onSelect={handleCategoryFilter}
-            />
+            <CategoryFilter selected={selectedCategory} counts={categoryCounts} onSelect={handleCategoryFilter} />
+
+            {/* Divider */}
+            <div className="h-px bg-gradient-to-r from-transparent via-sky-film/15 to-transparent" />
 
             {/* Results header */}
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">
-                  {searchQuery
-                    ? `Results for "${searchQuery}"`
-                    : selectedCategory
-                    ? `${selectedCategory.replace(/_/g, " ")} clips`
-                    : "All Clips"}
+                <h2 className="text-sm font-mono font-bold text-cream tracking-widest uppercase">
+                  {searchQuery ? `RESULTS: "${searchQuery}"` : selectedCategory ? `${selectedCategory.replace(/_/g, " ").toUpperCase()} CLIPS` : "ALL FOOTAGE"}
                 </h2>
-                <p className="text-sm text-white/40">{displayedClips.length} clips</p>
+                <p className="text-[10px] text-cream-muted/30 font-mono tracking-widest mt-1">{displayedClips.length} CLIPS FOUND</p>
               </div>
               {(searchQuery || selectedCategory) && (
                 <button
-                  onClick={() => {
-                    setSearchQuery(null);
-                    setSelectedCategory(null);
-                    setDisplayedClips(allClips);
-                  }}
-                  className="text-sm text-orange-400 hover:text-orange-300 transition-colors"
+                  onClick={() => { setSearchQuery(null); setSelectedCategory(null); setDisplayedClips(allClips); }}
+                  className="text-[10px] font-mono text-sky-film/50 hover:text-sky-film tracking-widest uppercase transition-colors"
                 >
-                  Clear filter
+                  ✕ CLEAR
                 </button>
               )}
             </div>
 
-            {/* Clips grid */}
+            {/* Grid */}
             {displayedClips.length === 0 ? (
-              <div className="text-center py-20 text-white/30">
-                <p className="text-5xl mb-4">🏀</p>
-                <p className="text-lg font-medium">No clips found</p>
-                <p className="text-sm mt-1">Try a different search term or clear the filter</p>
+              <div className="text-center py-20">
+                <p className="text-5xl mb-4 opacity-30">📼</p>
+                <p className="font-mono text-cream-muted/30 tracking-widest uppercase text-sm">NO CLIPS FOUND</p>
+                <p className="font-mono text-cream-muted/20 tracking-wider text-xs mt-2">Try a different search or clear the filter</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {displayedClips.map((clip) => (
-                  <ClipCard
-                    key={clip.id}
-                    clip={clip}
-                    onPlay={setActiveClip}
-                  />
+                  <ClipCard key={clip.id} clip={clip} onPlay={setActiveClip} />
                 ))}
               </div>
             )}

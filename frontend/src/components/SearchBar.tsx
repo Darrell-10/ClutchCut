@@ -1,5 +1,4 @@
 import { useState, type KeyboardEvent } from "react";
-import { Search, Sparkles } from "lucide-react";
 import clsx from "clsx";
 
 interface Props {
@@ -13,10 +12,10 @@ const EXAMPLE_SEARCHES = [
   "pick and roll",
   "fast break dunk",
   "steal and layup",
-  "behind the back crossover",
   "alley-oop",
   "blocked shot",
-  "clutch three pointer",
+  "crossover",
+  "three pointer",
 ];
 
 export default function SearchBar({ onSearch, isSearching, disabled }: Props) {
@@ -35,18 +34,24 @@ export default function SearchBar({ onSearch, isSearching, disabled }: Props) {
     <div className="w-full">
       <div className="relative flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30 pointer-events-none" />
+          {/* Finder bracket decoration */}
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-60">
+            <div className="absolute top-0 left-0 w-2 h-0.5 bg-sky-film" />
+            <div className="absolute top-0 left-0 w-0.5 h-2 bg-sky-film" />
+            <div className="absolute bottom-0 right-0 w-2 h-0.5 bg-sky-film" />
+            <div className="absolute bottom-0 right-0 w-0.5 h-2 bg-sky-film" />
+          </div>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKey}
             disabled={disabled || isSearching}
-            placeholder="Describe the play you're looking for..."
+            placeholder="SEARCH PLAY — e.g. half court shot, pick and roll..."
             className={clsx(
-              "w-full pl-12 pr-4 py-4 rounded-xl text-white placeholder-white/30",
-              "bg-white/8 border border-white/15 outline-none text-base",
-              "focus:border-orange-400/60 focus:bg-white/10 transition-all",
+              "w-full pl-10 pr-4 py-4 rounded-xl text-cream placeholder-cream-muted/30",
+              "bg-navy-dark/80 border border-sky-film/20 outline-none text-sm font-mono tracking-wide",
+              "focus:border-sky-film/60 focus:bg-navy-dark focus:shadow-[0_0_20px_rgba(91,188,214,0.1)] transition-all",
               disabled && "opacity-50 cursor-not-allowed"
             )}
           />
@@ -55,40 +60,29 @@ export default function SearchBar({ onSearch, isSearching, disabled }: Props) {
           onClick={handleSearch}
           disabled={disabled || isSearching || !query.trim()}
           className={clsx(
-            "px-6 py-4 rounded-xl font-semibold text-sm transition-all flex items-center gap-2 whitespace-nowrap",
-            "bg-orange-500 hover:bg-orange-400 text-white",
-            "disabled:opacity-40 disabled:cursor-not-allowed"
+            "px-6 py-4 rounded-xl font-bold text-xs tracking-widest uppercase transition-all whitespace-nowrap",
+            "bg-sky-film/15 border border-sky-film/40 text-sky-film",
+            "hover:bg-sky-film/25 hover:border-sky-film/70 hover:shadow-[0_0_20px_rgba(91,188,214,0.25)]",
+            "disabled:opacity-30 disabled:cursor-not-allowed"
           )}
         >
-          {isSearching ? (
-            <>
-              <Sparkles className="w-4 h-4 animate-pulse" />
-              Searching...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              Find Clip
-            </>
-          )}
+          {isSearching ? "◉ SCANNING..." : "◉ FIND CLIP"}
         </button>
       </div>
 
-      {/* Example queries */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <span className="text-xs text-white/30 self-center">Try:</span>
+      {/* Example tags */}
+      <div className="mt-3 flex flex-wrap gap-2 items-center">
+        <span className="text-[10px] text-cream-muted/30 font-mono tracking-widest">QUICK FIND:</span>
         {EXAMPLE_SEARCHES.map((ex) => (
           <button
             key={ex}
-            onClick={() => {
-              setQuery(ex);
-              onSearch(ex);
-            }}
+            onClick={() => { setQuery(ex); onSearch(ex); }}
             disabled={disabled || isSearching}
             className={clsx(
-              "text-xs px-3 py-1.5 rounded-lg border transition-all",
-              "border-white/10 text-white/40 hover:border-orange-400/40 hover:text-white/70 hover:bg-orange-500/5",
-              "disabled:opacity-30 disabled:cursor-not-allowed"
+              "text-[10px] px-3 py-1 rounded-md border font-mono tracking-wider uppercase transition-all",
+              "border-cream-muted/10 text-cream-muted/30",
+              "hover:border-sky-film/40 hover:text-sky-film/70 hover:bg-sky-film/5",
+              "disabled:opacity-20 disabled:cursor-not-allowed"
             )}
           >
             {ex}
