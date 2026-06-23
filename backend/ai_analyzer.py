@@ -1,6 +1,8 @@
 import os
 import json
 import re
+import io
+import time
 from pathlib import Path
 from PIL import Image
 from google import genai
@@ -46,10 +48,13 @@ Respond with a JSON array ONLY (no markdown):
 Only include clips with relevance > 0.3. Sort by relevance descending."""
 
 
-def _load_pil(image_path: str) -> Image.Image:
-    img = Image.open(image_path)
+def _image_to_part(image_path: str) -> types.Part:
+    """Load an image and convert it to a Gemini-compatible Part (JPEG bytes)."""
+    img = Image.open(image_path).convert("RGB")
     img.thumbnail((640, 480))
-    return img
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    return types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
 
 
 class GeminiAnalyzer:
@@ -58,6 +63,29 @@ class GeminiAnalyzer:
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable not set")
         self.client = genai.Client(api_key=api_key)
+
+    def _generate_with_retry(self, model: str, contents, config, max_retries: int = 4) -> str:
+        """Call Gemini with exponential backoff on rate limit errors."""
+        delay = 15
+        for attempt in range(max_retries):
+            try:
+                response = self.client.models.generate_content(
+                    model=model, contents=contents, config=config
+                )
+                return response.text.strip()
+            except Exception as e:
+                err = str(e)
+                if "429" in err or "RESOURCE_EXHAUSTED" in err:
+                    # Extract suggested retry delay if available
+                    import re as _re
+                    match = _re.search(r"retry in (\d+)", err)
+                    wait = int(match.group(1)) + 2 if match else delay
+                    print(f"[clutch-cut] Rate limited, waiting {wait}s before retry {attempt+1}/{max_retries}...")
+                    time.sleep(wait)
+                    delay = min(delay * 2, 60)
+                else:
+                    raise
+        raise Exception("Max retries exceeded on rate limit")
 
     def classify_clip(self, frame_paths: list[str]) -> dict:
         """Classify a basketball clip given a list of extracted frame image paths."""
@@ -72,8 +100,7 @@ class GeminiAnalyzer:
         parts: list = [CLASSIFY_PROMPT]
         for path in frame_paths[:5]:
             try:
-                img = _load_pil(path)
-                parts.append(img)
+                parts.append(_image_to_part(path))
             except Exception:
                 continue
 
@@ -86,15 +113,14 @@ class GeminiAnalyzer:
             }
 
         try:
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
+            text = self._generate_with_retry(
+                model="gemini-2.0-flash-lite",
                 contents=parts,
                 config=types.GenerateContentConfig(
                     temperature=0.1,
                     max_output_tokens=512,
                 )
             )
-            text = response.text.strip()
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)
             result = json.loads(text)
@@ -129,15 +155,14 @@ class GeminiAnalyzer:
         )
 
         try:
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
+            text = self._generate_with_retry(
+                model="gemini-2.0-flash-lite",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.1,
                     max_output_tokens=1024,
                 )
             )
-            text = response.text.strip()
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)
             rankings = json.loads(text)
