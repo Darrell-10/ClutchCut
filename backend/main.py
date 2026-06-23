@@ -73,6 +73,9 @@ def _process_video_sync(job_id: str, video_path: str):
         )
         print(f"[clutch-cut] Found {total} scenes, starting AI analysis...")
 
+        # ── Phase 1: extract all clips + frames (fast, no API calls) ──────────
+        clip_meta = []
+        all_frame_paths = []
         for idx, (start, end) in enumerate(scenes):
             clip_name = f"{job_id}_clip_{idx:04d}.mp4"
             thumb_name = f"{job_id}_thumb_{idx:04d}.jpg"
@@ -80,42 +83,56 @@ def _process_video_sync(job_id: str, video_path: str):
             thumb_path = str(THUMBNAILS_DIR / thumb_name)
             frames_dir = str(FRAMES_DIR / f"{job_id}_{idx:04d}")
 
-            # Extract clip
             vp.extract_clip(video_path, start, end, clip_path)
-
-            # Extract frames for AI analysis
-            frame_paths = vp.extract_frames(video_path, start, end, frames_dir, num_frames=4)
-
-            # Extract thumbnail
+            frame_paths = vp.extract_frames(video_path, start, end, frames_dir, num_frames=2)
             vp.extract_thumbnail(video_path, start, end, thumb_path)
 
-            # AI classification
-            result = analyzer.classify_clip(frame_paths)
+            clip_meta.append({
+                "start": start, "end": end,
+                "clip_name": clip_name, "thumb_name": thumb_name,
+                "frames_dir": frames_dir, "frame_paths": frame_paths
+            })
+            all_frame_paths.append(frame_paths)
 
-            # Save to DB
+            progress = 10 + int((idx + 1) / total * 40)
+            database.update_job_status(
+                job_id, JobStatus.PROCESSING, progress=progress,
+                total_clips=total, processed_clips=0,
+                message=f"Extracting clip {idx+1}/{total}..."
+            )
+
+        print(f"[clutch-cut] All clips extracted. Starting batch AI analysis...")
+
+        # ── Phase 2: batch classify all clips (minimises API calls) ──────────
+        BATCH_SIZE = 10
+        results = []
+        for batch_start in range(0, total, BATCH_SIZE):
+            batch_frames = all_frame_paths[batch_start:batch_start + BATCH_SIZE]
+            batch_results = analyzer.classify_clips_batch(batch_frames)
+            results.extend(batch_results)
+            analyzed = min(batch_start + BATCH_SIZE, total)
+            progress = 50 + int(analyzed / total * 45)
+            database.update_job_status(
+                job_id, JobStatus.PROCESSING, progress=progress,
+                total_clips=total, processed_clips=analyzed,
+                message=f"AI analyzed {analyzed}/{total} clips..."
+            )
+            print(f"[clutch-cut] Batch {batch_start//BATCH_SIZE + 1}: analyzed clips {batch_start}–{batch_start+len(batch_frames)-1}")
+
+        # ── Phase 3: save to DB + cleanup ─────────────────────────────────────
+        for idx, (meta, result) in enumerate(zip(clip_meta, results)):
             database.insert_clip(
                 job_id=job_id,
-                start_time=start,
-                end_time=end,
+                start_time=meta["start"],
+                end_time=meta["end"],
                 category=result.get("category", "unknown"),
                 description=result.get("description", ""),
                 confidence=result.get("confidence", 0.0),
-                clip_filename=clip_name,
-                thumbnail_filename=thumb_name
+                clip_filename=meta["clip_name"],
+                thumbnail_filename=meta["thumb_name"]
             )
-
-            # Cleanup frames
-            vp.cleanup_frames(frames_dir)
-
-            progress = 10 + int((idx + 1) / total * 85)
-            database.update_job_status(
-                job_id, JobStatus.PROCESSING,
-                progress=progress,
-                total_clips=total,
-                processed_clips=idx + 1,
-                message=f"Analyzed {idx + 1}/{total} clips..."
-            )
-            print(f"[clutch-cut] Clip {idx+1}/{total} → {result.get('category')} ({progress}%)")
+            vp.cleanup_frames(meta["frames_dir"])
+            print(f"[clutch-cut] Clip {idx+1}/{total} → {result.get('category')}")
 
         database.update_job_status(
             job_id, JobStatus.DONE, progress=100,
