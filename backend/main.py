@@ -1,15 +1,15 @@
 import os
 import uuid
 import asyncio
+import threading
 from pathlib import Path
 from typing import Optional, List
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -27,7 +27,6 @@ CLIPS_DIR = Path(__file__).parent / "clips"
 THUMBNAILS_DIR = Path(__file__).parent / "thumbnails"
 FRAMES_DIR = Path(__file__).parent / "frames"
 
-executor = ThreadPoolExecutor(max_workers=2)
 
 
 @asynccontextmanager
@@ -55,13 +54,15 @@ app.mount("/thumbnails", StaticFiles(directory=str(THUMBNAILS_DIR)), name="thumb
 
 
 def _process_video_sync(job_id: str, video_path: str):
-    """Full video processing pipeline (runs in thread pool)."""
+    """Full video processing pipeline (runs in background thread)."""
+    print(f"[clutch-cut] Starting processing for job {job_id}")
     try:
         analyzer = GeminiAnalyzer()
 
         database.update_job_status(
             job_id, JobStatus.PROCESSING, progress=5, message="Detecting scenes..."
         )
+        print(f"[clutch-cut] Detecting scenes in {video_path}")
 
         scenes = vp.detect_scenes(video_path, min_scene_duration=2.0)
         total = len(scenes)
@@ -70,6 +71,7 @@ def _process_video_sync(job_id: str, video_path: str):
             job_id, JobStatus.PROCESSING, progress=10,
             total_clips=total, message=f"Found {total} scenes. Analyzing..."
         )
+        print(f"[clutch-cut] Found {total} scenes, starting AI analysis...")
 
         for idx, (start, end) in enumerate(scenes):
             clip_name = f"{job_id}_clip_{idx:04d}.mp4"
@@ -113,21 +115,25 @@ def _process_video_sync(job_id: str, video_path: str):
                 processed_clips=idx + 1,
                 message=f"Analyzed {idx + 1}/{total} clips..."
             )
+            print(f"[clutch-cut] Clip {idx+1}/{total} → {result.get('category')} ({progress}%)")
 
         database.update_job_status(
             job_id, JobStatus.DONE, progress=100,
             total_clips=total, processed_clips=total,
             message=f"Done! {total} clips ready."
         )
+        print(f"[clutch-cut] Job {job_id} complete — {total} clips ready")
 
     except Exception as e:
+        print(f"[clutch-cut] ERROR in job {job_id}: {e}")
+        import traceback; traceback.print_exc()
         database.update_job_status(
             job_id, JobStatus.FAILED, message=f"Error: {str(e)}"
         )
 
 
 @app.post("/api/upload", response_model=UploadResponse)
-async def upload_video(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def upload_video(file: UploadFile = File(...)):
     if not file.content_type or not file.content_type.startswith("video/"):
         raise HTTPException(400, "File must be a video")
 
@@ -140,8 +146,8 @@ async def upload_video(background_tasks: BackgroundTasks, file: UploadFile = Fil
 
     database.create_job(job_id, file.filename or "video")
 
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(executor, _process_video_sync, job_id, str(video_path))
+    t = threading.Thread(target=_process_video_sync, args=(job_id, str(video_path)), daemon=True)
+    t.start()
 
     return UploadResponse(
         job_id=job_id,
