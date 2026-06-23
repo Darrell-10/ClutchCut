@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
+import { Link } from "react-router-dom";
 import logo from "./assets/logo.png";
 import VideoUpload from "./components/VideoUpload";
 import ProcessingStatusComp from "./components/ProcessingStatus";
@@ -161,6 +162,12 @@ export default function App() {
           <p className="text-cream-muted/40 text-sm font-mono tracking-[0.4em] uppercase mb-2">
             Basketball Intelligence System
           </p>
+
+          {/* Slogan */}
+          <p className="text-cream/80 text-base font-light tracking-wide mb-3 italic">
+            "Show your work. Achieve your dreams."
+          </p>
+
           <div className="flex items-center justify-center gap-4 text-[10px] font-mono tracking-widest text-cream-muted/25">
             <span>◉ AI SCENE DETECT</span>
             <span className="text-sky-film/30">▮</span>
@@ -169,15 +176,23 @@ export default function App() {
             <span>◉ INSTANT SEARCH</span>
           </div>
 
-          {jobId && stage !== "upload" && (
-            <button
-              onClick={handleReset}
-              className="mt-5 inline-flex items-center gap-1.5 text-[10px] text-cream-muted/25 hover:text-cream-muted/50 transition-colors font-mono tracking-widest uppercase"
+          <div className="flex items-center justify-center gap-4 mt-5">
+            {jobId && stage !== "upload" && (
+              <button
+                onClick={handleReset}
+                className="inline-flex items-center gap-1.5 text-[10px] text-cream-muted/25 hover:text-cream-muted/50 transition-colors font-mono tracking-widest uppercase"
+              >
+                <RefreshCw className="w-3 h-3" />
+                NEW FOOTAGE
+              </button>
+            )}
+            <Link
+              to="/about"
+              className="inline-flex items-center gap-1.5 text-[10px] text-cream-muted/25 hover:text-sky-film/60 transition-colors font-mono tracking-widest uppercase border border-cream-muted/10 hover:border-sky-film/20 px-3 py-1.5 rounded-lg"
             >
-              <RefreshCw className="w-3 h-3" />
-              NEW FOOTAGE
-            </button>
-          )}
+              ◉ ABOUT THE CREATOR
+            </Link>
+          </div>
         </header>
 
         {/* ── UPLOAD STAGE ── */}
