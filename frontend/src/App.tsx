@@ -148,7 +148,10 @@ export default function App() {
               <img
                 src={logo}
                 alt="ClutchCut"
-                className="h-28 w-auto drop-shadow-[0_0_30px_rgba(91,188,214,0.3)] select-none"
+                className="h-28 w-auto select-none"
+                style={{
+                  filter: 'invert(1) sepia(1) saturate(0) brightness(1.8) drop-shadow(0 0 24px rgba(91,188,214,0.35))'
+                }}
               />
               {/* Glow behind logo */}
               <div className="absolute inset-0 blur-2xl bg-sky-film/10 -z-10 scale-150" />
