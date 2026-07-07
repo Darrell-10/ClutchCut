@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
-import { Link } from "react-router-dom";
 import logo from "./assets/logo.png";
 import VideoUpload from "./components/VideoUpload";
 import ProcessingStatusComp from "./components/ProcessingStatus";
@@ -9,6 +8,7 @@ import ClipCard from "./components/ClipCard";
 import VideoPlayer from "./components/VideoPlayer";
 import CategoryFilter from "./components/CategoryFilter";
 import CamcorderHUD from "./components/CamcorderHUD";
+import NavBar from "./components/NavBar";
 import type { Clip, PlayCategory, ProcessingStatus } from "./types";
 import { uploadVideo, getStatus, getClips, searchClips } from "./api";
 
@@ -115,6 +115,8 @@ export default function App() {
       {/* Camcorder HUD */}
       <CamcorderHUD isRecording={isRecording} />
 
+      <NavBar />
+
       {/* Background texture */}
       <div className="fixed inset-0 pointer-events-none opacity-30"
         style={{
@@ -143,8 +145,7 @@ export default function App() {
 
         {/* ── HEADER ── */}
         <header className="text-center mb-14">
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-5">
             <div className="relative">
               <img
                 src={logo}
@@ -154,7 +155,6 @@ export default function App() {
                   filter: 'invert(1) sepia(1) saturate(0) brightness(1.8) drop-shadow(0 0 24px rgba(91,188,214,0.35))'
                 }}
               />
-              {/* Glow behind logo */}
               <div className="absolute inset-0 blur-2xl bg-sky-film/10 -z-10 scale-150" />
             </div>
           </div>
@@ -163,8 +163,7 @@ export default function App() {
             Basketball Intelligence System
           </p>
 
-          {/* Slogan */}
-          <p className="text-cream/80 text-base font-light tracking-wide mb-3 italic">
+          <p className="text-cream/70 text-base font-light tracking-wide mb-3 italic">
             "Show your work. Achieve your dreams."
           </p>
 
@@ -176,8 +175,8 @@ export default function App() {
             <span>◉ INSTANT SEARCH</span>
           </div>
 
-          <div className="flex items-center justify-center gap-4 mt-5">
-            {jobId && stage !== "upload" && (
+          {jobId && stage !== "upload" && (
+            <div className="flex justify-center mt-5">
               <button
                 onClick={handleReset}
                 className="inline-flex items-center gap-1.5 text-[10px] text-cream-muted/25 hover:text-cream-muted/50 transition-colors font-mono tracking-widest uppercase"
@@ -185,14 +184,8 @@ export default function App() {
                 <RefreshCw className="w-3 h-3" />
                 NEW FOOTAGE
               </button>
-            )}
-            <Link
-              to="/about"
-              className="inline-flex items-center gap-1.5 text-[10px] text-cream-muted/25 hover:text-sky-film/60 transition-colors font-mono tracking-widest uppercase border border-cream-muted/10 hover:border-sky-film/20 px-3 py-1.5 rounded-lg"
-            >
-              ◉ ABOUT THE CREATOR
-            </Link>
-          </div>
+            </div>
+          )}
         </header>
 
         {/* ── UPLOAD STAGE ── */}

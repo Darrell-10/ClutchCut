@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import logo from "../assets/logo.png";
 import creator from "../assets/creator.png";
+import NavBar from "../components/NavBar";
 
 export default function AboutPage() {
   return (
@@ -32,25 +32,9 @@ export default function AboutPage() {
         }}
       />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-8 py-10">
+      <NavBar />
 
-        {/* Nav */}
-        <div className="flex items-center justify-between mb-16">
-          <Link to="/">
-            <img
-              src={logo}
-              alt="ClutchCut"
-              className="h-12 w-auto select-none"
-              style={{ filter: 'invert(1) sepia(1) saturate(0) brightness(1.8) drop-shadow(0 0 12px rgba(91,188,214,0.25))' }}
-            />
-          </Link>
-          <Link
-            to="/"
-            className="font-mono text-[10px] tracking-widest uppercase text-cream-muted/40 hover:text-sky-film transition-colors border border-cream-muted/10 hover:border-sky-film/30 px-4 py-2 rounded-lg"
-          >
-            ← BACK TO APP
-          </Link>
-        </div>
+      <div className="relative z-10 max-w-5xl mx-auto px-8 py-10">
 
         {/* Slogan banner */}
         <div className="text-center mb-16">

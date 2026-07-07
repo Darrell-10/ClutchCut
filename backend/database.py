@@ -16,6 +16,14 @@ def get_conn():
 def init_db():
     conn = get_conn()
     conn.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            hashed_password TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS jobs (
             id TEXT PRIMARY KEY,
             filename TEXT NOT NULL,
@@ -44,15 +52,61 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_clips_job_id ON clips(job_id);
         CREATE INDEX IF NOT EXISTS idx_clips_category ON clips(category);
     """)
+    # Migrate: add user_id to jobs if not present (safe ALTER TABLE)
+    try:
+        conn.execute("ALTER TABLE jobs ADD COLUMN user_id INTEGER REFERENCES users(id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id)")
+    except Exception:
+        pass
     conn.commit()
     conn.close()
 
 
-def create_job(job_id: str, filename: str):
+# ── User operations ───────────────────────────────────────────────────────────
+
+def create_user(name: str, email: str, hashed_password: str) -> int:
+    conn = get_conn()
+    cursor = conn.execute(
+        "INSERT INTO users (name, email, hashed_password) VALUES (?, ?, ?)",
+        (name, email, hashed_password)
+    )
+    conn.commit()
+    user_id = cursor.lastrowid
+    conn.close()
+    return user_id
+
+
+def get_user_by_email(email: str) -> Optional[dict]:
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_user_by_id(user_id: int) -> Optional[dict]:
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_jobs_for_user(user_id: int) -> List[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT * FROM jobs WHERE user_id=? ORDER BY created_at DESC",
+        (user_id,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ── Job operations ─────────────────────────────────────────────────────────────
+
+def create_job(job_id: str, filename: str, user_id: Optional[int] = None):
     conn = get_conn()
     conn.execute(
-        "INSERT INTO jobs (id, filename, status) VALUES (?, ?, 'pending')",
-        (job_id, filename)
+        "INSERT INTO jobs (id, user_id, filename, status) VALUES (?, ?, ?, 'pending')",
+        (job_id, user_id, filename)
     )
     conn.commit()
     conn.close()

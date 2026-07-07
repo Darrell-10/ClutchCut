@@ -12,6 +12,13 @@ const BASE = "http://localhost:8000";
 
 export const api = axios.create({ baseURL: BASE });
 
+// Attach token to every request if present
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("cc_token");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
 export async function uploadVideo(file: File): Promise<UploadResponse> {
   const form = new FormData();
   form.append("file", file);
@@ -47,4 +54,28 @@ export function getThumbnailUrl(filename: string): string {
 
 export function getDownloadUrl(filename: string): string {
   return `${BASE}/api/clip/download/${filename}`;
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+export interface AuthUser { id: number; name: string; email: string; }
+export interface AuthResponse { access_token: string; user_id: number; name: string; email: string; }
+
+export async function register(name: string, email: string, password: string): Promise<AuthResponse> {
+  const res = await api.post<AuthResponse>("/api/auth/register", { name, email, password });
+  return res.data;
+}
+
+export async function login(email: string, password: string): Promise<AuthResponse> {
+  const res = await api.post<AuthResponse>("/api/auth/login", { email, password });
+  return res.data;
+}
+
+export async function getMe(): Promise<AuthUser> {
+  const res = await api.get<AuthUser>("/api/auth/me");
+  return res.data;
+}
+
+export async function getMyJobs(): Promise<any[]> {
+  const res = await api.get("/api/my/jobs");
+  return res.data;
 }
