@@ -79,7 +79,7 @@ export default function ClipCard({ clip, onPlay }: Props) {
         </div>
 
         {/* Duration - VHS counter style */}
-        <div className="absolute bottom-2 right-2 bg-navy-dark/90 border border-cream-muted/10 rounded px-2 py-0.5 text-[10px] text-cream-dark font-mono tracking-widest">
+        <div className="absolute bottom-2 right-2 bg-navy-dark/90 border border-cream/20 rounded px-2 py-0.5 text-[10px] text-cream font-mono tracking-widest">
           {formatTime(clip.duration)}
         </div>
 
@@ -94,23 +94,23 @@ export default function ClipCard({ clip, onPlay }: Props) {
 
       {/* Info panel */}
       <div className="p-4">
-        <p className="text-xs text-cream-muted/60 line-clamp-2 leading-relaxed mb-3 font-mono">
+        <p className="text-xs text-cream/80 line-clamp-2 leading-relaxed mb-3 font-mono">
           {clip.description || "Basketball play detected"}
         </p>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 font-mono text-[10px] text-cream-muted/40 tracking-wider">
+          <div className="flex items-center gap-3 font-mono text-[10px] text-cream/60 tracking-wider">
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {formatTime(clip.start_time)}
             </span>
-            <span className="text-sky-film/50">▮ {confidence}%</span>
+            <span className="text-sky-film">▮ {confidence}%</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => onPlay(clip)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded border border-sky-film/30 bg-sky-film/8 hover:bg-sky-film/20 hover:border-sky-film/60 text-sky-film text-[10px] font-mono tracking-widest uppercase transition-all"
+              className="flex items-center gap-1 px-3 py-1.5 rounded border border-sky-film/50 bg-sky-film/10 hover:bg-sky-film/25 hover:border-sky-film text-sky-film text-[10px] font-mono tracking-widest uppercase transition-all"
             >
               <Play className="w-2.5 h-2.5 fill-current" />
               PLAY
@@ -118,7 +118,7 @@ export default function ClipCard({ clip, onPlay }: Props) {
             <a
               href={getDownloadUrl(clip.clip_filename)}
               download
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded border border-cream-muted/10 bg-navy/40 hover:bg-navy hover:border-cream-muted/20 text-cream-muted/50 text-[10px] font-mono transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded border border-cream/20 bg-navy/40 hover:bg-navy hover:border-cream/40 text-cream/70 text-[10px] font-mono transition-all"
             >
               <Download className="w-2.5 h-2.5" />
             </a>

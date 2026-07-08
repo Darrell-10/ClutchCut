@@ -56,7 +56,7 @@ export default function VideoUpload({ onUpload, isUploading }: Props) {
         {/* Film reel icon made with CSS */}
         <div className={clsx(
           "w-24 h-24 rounded-full border-4 flex items-center justify-center transition-all duration-300 relative",
-          isDragActive ? "border-sky-film bg-sky-film/10" : "border-cream-muted/30 bg-navy/60"
+          isDragActive ? "border-sky-film bg-sky-film/10" : "border-cream/40 bg-navy/60"
         )}>
           {/* Sprocket holes */}
           <div className="absolute inset-0 rounded-full overflow-hidden">
@@ -107,7 +107,7 @@ export default function VideoUpload({ onUpload, isUploading }: Props) {
         </div>
       )}
 
-      <p className="mt-4 text-xs text-cream-muted/40 text-center font-mono tracking-widest">
+      <p className="mt-4 text-xs text-cream/60 text-center font-mono tracking-widest">
         GEMINI VISION AI  ·  AUTO SCENE DETECT  ·  PLAY CLASSIFICATION
       </p>
     </div>
