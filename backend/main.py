@@ -2,7 +2,6 @@ import os
 import uuid
 import asyncio
 import threading
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List
 from contextlib import asynccontextmanager
@@ -10,14 +9,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from pydantic import BaseModel as PydanticBaseModel
 
 import database
 import video_processor as vp
@@ -26,65 +21,6 @@ from models import (
     UploadResponse, ProcessingStatus, Clip, SearchRequest,
     SearchResponse, JobStatus, PlayCategory
 )
-
-# ── Auth config ───────────────────────────────────────────────────────────────
-SECRET_KEY = os.environ.get("SECRET_KEY", "clutchcut-secret-key-change-in-production-2026")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_DAYS = 30
-
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
-bearer_scheme = HTTPBearer(auto_error=False)
-
-
-class RegisterRequest(PydanticBaseModel):
-    name: str
-    email: str
-    password: str
-
-
-class LoginRequest(PydanticBaseModel):
-    email: str
-    password: str
-
-
-class AuthResponse(PydanticBaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user_id: int
-    name: str
-    email: str
-
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
-
-
-def create_token(user_id: int) -> str:
-    expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-    return jwt.encode({"sub": str(user_id), "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> Optional[dict]:
-    if not credentials:
-        return None
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = int(payload.get("sub"))
-        return database.get_user_by_id(user_id)
-    except (JWTError, Exception):
-        return None
-
-
-def require_auth(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> dict:
-    user = get_current_user(credentials)
-    if not user:
-        raise HTTPException(401, "Not authenticated")
-    return user
-
 
 UPLOADS_DIR = Path(__file__).parent / "uploads"
 CLIPS_DIR = Path(__file__).parent / "clips"
@@ -214,15 +150,9 @@ def _process_video_sync(job_id: str, video_path: str):
 
 
 @app.post("/api/upload", response_model=UploadResponse)
-async def upload_video(
-    file: UploadFile = File(...),
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
-):
+async def upload_video(file: UploadFile = File(...)):
     if not file.content_type or not file.content_type.startswith("video/"):
         raise HTTPException(400, "File must be a video")
-
-    user = get_current_user(credentials)
-    user_id = user["id"] if user else None
 
     job_id = str(uuid.uuid4())
     ext = Path(file.filename or "video.mp4").suffix or ".mp4"
@@ -231,7 +161,7 @@ async def upload_video(
     contents = await file.read()
     video_path.write_bytes(contents)
 
-    database.create_job(job_id, file.filename or "video", user_id=user_id)
+    database.create_job(job_id, file.filename or "video")
 
     t = threading.Thread(target=_process_video_sync, args=(job_id, str(video_path)), daemon=True)
     t.start()
@@ -355,37 +285,3 @@ async def list_jobs():
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "clutch-cut"}
-
-
-# ── Auth endpoints ─────────────────────────────────────────────────────────────
-
-@app.post("/api/auth/register", response_model=AuthResponse)
-async def register(req: RegisterRequest):
-    if database.get_user_by_email(req.email):
-        raise HTTPException(400, "Email already registered")
-    if len(req.password) < 6:
-        raise HTTPException(400, "Password must be at least 6 characters")
-    hashed = hash_password(req.password)
-    user_id = database.create_user(req.name.strip(), req.email.lower().strip(), hashed)
-    token = create_token(user_id)
-    return AuthResponse(access_token=token, user_id=user_id, name=req.name.strip(), email=req.email.lower())
-
-
-@app.post("/api/auth/login", response_model=AuthResponse)
-async def login(req: LoginRequest):
-    user = database.get_user_by_email(req.email.lower().strip())
-    if not user or not verify_password(req.password, user["hashed_password"]):
-        raise HTTPException(401, "Invalid email or password")
-    token = create_token(user["id"])
-    return AuthResponse(access_token=token, user_id=user["id"], name=user["name"], email=user["email"])
-
-
-@app.get("/api/auth/me")
-async def me(user: dict = Depends(require_auth)):
-    return {"id": user["id"], "name": user["name"], "email": user["email"]}
-
-
-@app.get("/api/my/jobs")
-async def my_jobs(user: dict = Depends(require_auth)):
-    jobs = database.get_jobs_for_user(user["id"])
-    return jobs
