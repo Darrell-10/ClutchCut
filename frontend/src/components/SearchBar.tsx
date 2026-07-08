@@ -49,9 +49,9 @@ export default function SearchBar({ onSearch, isSearching, disabled }: Props) {
             disabled={disabled || isSearching}
             placeholder="SEARCH PLAY — e.g. half court shot, pick and roll..."
             className={clsx(
-              "w-full pl-10 pr-4 py-4 rounded-xl text-cream placeholder-cream-muted/30",
-              "bg-navy-dark/80 border border-sky-film/20 outline-none text-sm font-mono tracking-wide",
-              "focus:border-sky-film/60 focus:bg-navy-dark focus:shadow-[0_0_20px_rgba(91,188,214,0.1)] transition-all",
+              "w-full pl-10 pr-4 py-4 rounded-xl text-cream placeholder-cream/40",
+              "bg-navy-dark/80 border border-sky-film/40 outline-none text-sm font-mono tracking-wide",
+              "focus:border-sky-film focus:bg-navy-dark focus:shadow-[0_0_20px_rgba(91,188,214,0.15)] transition-all",
               disabled && "opacity-50 cursor-not-allowed"
             )}
           />
@@ -72,7 +72,7 @@ export default function SearchBar({ onSearch, isSearching, disabled }: Props) {
 
       {/* Example tags */}
       <div className="mt-3 flex flex-wrap gap-2 items-center">
-        <span className="text-[10px] text-cream-muted/30 font-mono tracking-widest">QUICK FIND:</span>
+        <span className="text-[11px] text-cream/60 font-mono tracking-widest">QUICK FIND:</span>
         {EXAMPLE_SEARCHES.map((ex) => (
           <button
             key={ex}
@@ -80,9 +80,9 @@ export default function SearchBar({ onSearch, isSearching, disabled }: Props) {
             disabled={disabled || isSearching}
             className={clsx(
               "text-[10px] px-3 py-1 rounded-md border font-mono tracking-wider uppercase transition-all",
-              "border-cream-muted/10 text-cream-muted/30",
-              "hover:border-sky-film/40 hover:text-sky-film/70 hover:bg-sky-film/5",
-              "disabled:opacity-20 disabled:cursor-not-allowed"
+              "border-cream/20 text-cream/60",
+              "hover:border-sky-film/60 hover:text-sky-film hover:bg-sky-film/5",
+              "disabled:opacity-30 disabled:cursor-not-allowed"
             )}
           >
             {ex}

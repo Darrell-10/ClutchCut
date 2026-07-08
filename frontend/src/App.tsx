@@ -159,20 +159,20 @@ export default function App() {
             </div>
           </div>
 
-          <p className="text-cream-muted/40 text-sm font-mono tracking-[0.4em] uppercase mb-2">
+          <p className="text-sky-film text-sm font-mono tracking-[0.4em] uppercase mb-2">
             Basketball Intelligence System
           </p>
 
           {/* Slogan */}
-          <p className="text-cream/80 text-base font-light tracking-wide mb-3 italic">
+          <p className="text-cream text-base font-semibold tracking-wide mb-3 italic">
             "Show your work. Achieve your dreams."
           </p>
 
-          <div className="flex items-center justify-center gap-4 text-[10px] font-mono tracking-widest text-cream-muted/25">
+          <div className="flex items-center justify-center gap-4 text-[11px] font-mono tracking-widest text-cream/60">
             <span>◉ AI SCENE DETECT</span>
-            <span className="text-sky-film/30">▮</span>
+            <span className="text-sky-film">▮</span>
             <span>◉ GEMINI VISION</span>
-            <span className="text-sky-film/30">▮</span>
+            <span className="text-sky-film">▮</span>
             <span>◉ INSTANT SEARCH</span>
           </div>
 
@@ -180,7 +180,7 @@ export default function App() {
             {jobId && stage !== "upload" && (
               <button
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 text-[10px] text-cream-muted/25 hover:text-cream-muted/50 transition-colors font-mono tracking-widest uppercase"
+                className="inline-flex items-center gap-1.5 text-[11px] text-cream/60 hover:text-cream transition-colors font-mono tracking-widest uppercase"
               >
                 <RefreshCw className="w-3 h-3" />
                 NEW FOOTAGE
@@ -188,7 +188,7 @@ export default function App() {
             )}
             <Link
               to="/about"
-              className="inline-flex items-center gap-1.5 text-[10px] text-cream-muted/25 hover:text-sky-film/60 transition-colors font-mono tracking-widest uppercase border border-cream-muted/10 hover:border-sky-film/20 px-3 py-1.5 rounded-lg"
+              className="inline-flex items-center gap-1.5 text-[11px] text-cream/70 hover:text-sky-film transition-colors font-mono tracking-widest uppercase border border-cream/20 hover:border-sky-film/60 px-3 py-1.5 rounded-lg"
             >
               ◉ ABOUT THE CREATOR
             </Link>
@@ -213,8 +213,8 @@ export default function App() {
                   <div key={label} className="flex flex-col items-center gap-2 p-4 tape-border rounded-xl bg-navy/40 text-center">
                     <span className="text-2xl">{icon}</span>
                     <div>
-                      <p className="text-[10px] font-mono font-bold tracking-widest text-sky-film/70 uppercase">{label}</p>
-                      <p className="text-[9px] font-mono text-cream-muted/30 mt-0.5">{sub}</p>
+                      <p className="text-[11px] font-mono font-bold tracking-widest text-sky-film uppercase">{label}</p>
+                      <p className="text-[10px] font-mono text-cream/60 mt-0.5">{sub}</p>
                     </div>
                   </div>
                 ))}
@@ -227,8 +227,8 @@ export default function App() {
         {stage === "processing" && processingStatus && (
           <div className="flex flex-col items-center gap-6">
             <div className="text-center">
-              <p className="text-[10px] font-mono text-cream-muted/30 tracking-widest uppercase mb-1">Loading Tape</p>
-              <p className="text-cream-dark font-mono tracking-wide">{jobFilename}</p>
+              <p className="text-[11px] font-mono text-cream/60 tracking-widest uppercase mb-1">Loading Tape</p>
+              <p className="text-cream font-mono tracking-wide">{jobFilename}</p>
             </div>
             <ProcessingStatusComp status={processingStatus} />
           </div>
@@ -243,12 +243,12 @@ export default function App() {
                 <div className="w-2 h-2 rounded-full bg-sky-film shadow-[0_0_8px_rgba(91,188,214,0.8)]" />
                 <div>
                   <p className="text-[10px] font-mono font-bold text-sky-film tracking-widest uppercase">Tape Ready</p>
-                  <p className="text-[10px] text-cream-muted/30 font-mono mt-0.5 tracking-wider">{jobFilename}</p>
+                  <p className="text-[11px] text-cream/60 font-mono mt-0.5 tracking-wider">{jobFilename}</p>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-3xl font-black text-cream font-mono">{allClips.length}</p>
-                <p className="text-[10px] text-cream-muted/30 font-mono tracking-widest uppercase">CLIPS INDEXED</p>
+                <p className="text-[11px] text-cream/60 font-mono tracking-widest uppercase">CLIPS INDEXED</p>
               </div>
             </div>
 
@@ -267,12 +267,12 @@ export default function App() {
                 <h2 className="text-sm font-mono font-bold text-cream tracking-widest uppercase">
                   {searchQuery ? `RESULTS: "${searchQuery}"` : selectedCategory ? `${selectedCategory.replace(/_/g, " ").toUpperCase()} CLIPS` : "ALL FOOTAGE"}
                 </h2>
-                <p className="text-[10px] text-cream-muted/30 font-mono tracking-widest mt-1">{displayedClips.length} CLIPS FOUND</p>
+                <p className="text-[11px] text-cream/60 font-mono tracking-widest mt-1">{displayedClips.length} CLIPS FOUND</p>
               </div>
               {(searchQuery || selectedCategory) && (
                 <button
                   onClick={() => { setSearchQuery(null); setSelectedCategory(null); setDisplayedClips(allClips); }}
-                  className="text-[10px] font-mono text-sky-film/50 hover:text-sky-film tracking-widest uppercase transition-colors"
+                  className="text-[11px] font-mono text-sky-film hover:text-cream tracking-widest uppercase transition-colors"
                 >
                   ✕ CLEAR
                 </button>
